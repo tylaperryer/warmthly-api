@@ -1,25 +1,23 @@
-// functions/donations.ts
+// This is the final, robust version of the donations.ts file.
 
-// This is the Supabase client library.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// This import path is from the official Supabase documentation for Deno/Cloudflare.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
 
+// Define the structure for our environment variables
 interface Env {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
 }
 
-export const onRequest: PagesFunction<Env> = async (context) => {
+// This is the main function that runs when your API is called.
+export const onRequestGet: PagesFunction<Env> = async (context ) => {
   const { env } = context;
 
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*', // Or lock to 'https://www.warmthly.org'
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
-
-  if (context.request.method === 'OPTIONS' ) {
-    return new Response(null, { headers: corsHeaders });
-  }
 
   try {
     // Connect to your Supabase database using the secrets.
@@ -38,10 +36,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Log the detailed error on the server for debugging
+    console.error("Supabase fetch error:", error);
+    
+    // Send a generic error message to the client
+    return new Response(JSON.stringify({ error: 'Failed to fetch data from the database.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 };
- 
+
+// Handle the OPTIONS pre-flight request separately
+export const onRequestOptions: PagesFunction<Env> = async (context) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+  };
+  return new Response(null, { headers: corsHeaders });
+};
