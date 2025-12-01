@@ -1,4 +1,3 @@
-// functions/donations.ts
 import { createClient } from '@supabase/supabase-js';
 
 interface Env {
@@ -32,15 +31,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Supabase error:', error);
-
+  } catch (err: any) {
+    console.error('Supabase error:', err);
     return new Response(
-      JSON.stringify({ error: 'Failed to fetch donations', details: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ error: 'Database error', message: err.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 };
