@@ -1,3 +1,13 @@
+# wrangler.toml – correct version for Cloudflare Pages Functions (2025)
 name = "warmthly-api"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# This tells Pages where your Functions live
+[[pages.functions]]
+  directory = "functions"
+  # optional: you can add script = "donations.ts" if you want a specific route,
+  # but leaving it out means /donations → functions/donations.ts automatically
+
+# If you ever add static assets (HTML, CSS, etc.) in the future, add this line:
+# pages_build_output_dir = "./public"
