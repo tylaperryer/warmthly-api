@@ -1,7 +1,7 @@
 // functions/donations.ts
 
 // This is the Supabase client library.
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 interface Env {
   SUPABASE_URL: string;
