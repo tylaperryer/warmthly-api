@@ -1,59 +1,79 @@
-export interface Env {
-    YOCO_SECRET_KEY: string;
+// This is the secure, headless version of src/index.ts
+
+interface Env {
+  YOCO_SECRET_KEY: string;
 }
 
-export default {
-    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-        // This is crucial to allow your main website to talk to this API
-        const corsHeaders = {
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Origin': 'https://www.warmthly.org',
-        };
+export const onRequest: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
 
-        if (request.method === 'OPTIONS' ) {
-            return new Response(null, { headers: corsHeaders });
-        }
+  // Define the only domain that is allowed to talk to this API
+  const allowedOrigin = 'https://www.warmthly.org';
 
-        if (request.method !== 'POST') {
-            return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
-        }
+  const corsHeaders = {
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Origin': allowedOrigin,
+  };
 
-        try {
-            const { amount, currency } = await request.json();
+  // --- RULE 1: Handle the browser's pre-flight security check ---
+  if (request.method === 'OPTIONS' ) {
+    return new Response(null, { headers: corsHeaders });
+  }
 
-            if (!amount || !currency) {
-                return new Response('Missing amount or currency', { status: 400, headers: corsHeaders });
-            }
+  // --- RULE 2: Only allow POST requests from here on ---
+  if (request.method !== 'POST') {
+    // This is what a visitor typing the URL in their browser will see.
+    // It's a generic "not found" error, revealing nothing.
+    return new Response('Not Found', { status: 404 });
+  }
 
-            const yocoResponse = await fetch('https://online.yoco.com/v1/checkout/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${env.YOCO_SECRET_KEY}` // Using the secret key
-                },
-                body: JSON.stringify({
-                    amount: amount,
-                    currency: currency,
-                    success_url: 'https://www.warmthly.org/payment-success',
-                    cancel_url: 'https://www.warmthly.org/payment-cancelled'
-                } ),
-            });
+  // --- RULE 3: Check that the request is coming from your actual website ---
+  const origin = request.headers.get('Origin');
+  if (origin !== allowedOrigin) {
+    // This blocks other websites or tools from trying to use your API.
+    return new Response('Forbidden: Invalid origin', { status: 403 });
+  }
 
-            if (!yocoResponse.ok) {
-                const errorBody = await yocoResponse.text();
-                return new Response(`Yoco API error: ${errorBody}`, { status: yocoResponse.status, headers: corsHeaders });
-            }
+  // --- If all rules pass, proceed with the payment logic ---
+  try {
+    const body = await request.json<{ amount?: number; currency?: string }>();
+    const { amount, currency } = body;
 
-            const yocoData = await yocoResponse.json();
+    if (!amount || !currency) {
+      return new Response('Invalid request body: Missing amount or currency', { status: 400, headers: corsHeaders });
+    }
 
-            return new Response(JSON.stringify({ id: yocoData.id }), {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+    // Securely talk to Yoco's API
+    const yocoResponse = await fetch('https://online.yoco.com/v1/checkout/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.YOCO_SECRET_KEY}`
+      },
+      body: JSON.stringify({
+        amount: amount,
+        currency: currency,
+        success_url: 'https://www.warmthly.org/payment-success',
+        cancel_url: 'https://www.warmthly.org/payment-cancelled'
+      } ),
+    });
 
-        } catch (error) {
-            return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
-        }
-    },
+    if (!yocoResponse.ok) {
+      const errorBody = await yocoResponse.text();
+      return new Response(`Yoco API error: ${errorBody}`, { status: yocoResponse.status, headers: corsHeaders });
+    }
+
+    const yocoData = await yocoResponse.json();
+    const responseData = JSON.stringify({ id: yocoData.id });
+
+    return new Response(responseData, {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error creating checkout:', error);
+    return new Response('Internal Server Error', { status: 500, headers: corsHeaders });
+  }
 };
