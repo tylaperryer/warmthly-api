@@ -1,9 +1,0 @@
-name = "warmthly-api"
-compatibility_date = "2025-12-01"
-compatibility_flags = ["nodejs_compat"]
-
-# This is the only thing you need for Pages Functions
-pages_build_output_dir = "."   # tells Cloudflare there are no static assets, only Functions
-
-# Functions live in the /functions folder (standard for Pages)
-# No other settings needed
