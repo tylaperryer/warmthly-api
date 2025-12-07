@@ -1,36 +1,36 @@
-// This is the final, polished version of src/index.ts with redirection.
-
 interface Env {
   YOCO_SECRET_KEY: string;
-  // Add other secrets here as you need them, e.g., RESEND_API_KEY: string;
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
-  const allowedOrigin = 'https://www.warmthly.org';
-  const mainSiteUrl = 'https://www.warmthly.org'; // The URL to redirect to.
+  // Allow requests from all Warmthly sites
+  const allowedOrigins = [
+    'https://www.warmthly.org',
+    'https://mint.warmthly.org',
+    'https://post.warmthly.org',
+    'https://admin.warmthly.org',
+  ];
+  
+  const mainSiteUrl = 'https://www.warmthly.org';
+  const origin = request.headers.get('Origin') || '';
+  const isAllowedOrigin = allowedOrigins.some(allowed => origin.includes(allowed));
 
   const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : allowedOrigins[0],
   };
 
-  // --- RULE 1: Handle the browser's pre-flight security check ---
-  if (request.method === 'OPTIONS' ) {
+  if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // --- RULE 2: Handle legitimate POST requests from your frontend ---
   if (request.method === 'POST') {
-    // Check that the request is coming from your actual website.
-    const origin = request.headers.get('Origin');
-    if (origin !== allowedOrigin) {
+    if (!isAllowedOrigin) {
       return new Response('Forbidden: Invalid origin', { status: 403 });
     }
-
-    // --- If all rules pass, proceed with the payment logic ---
     try {
       const body = await request.json<{ amount?: number; currency?: string }>();
       const { amount, currency } = body;
@@ -73,7 +73,5 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // --- RULE 3: For ALL other requests (GET, PUT, etc.), redirect to the main site ---
-  // This is the "bounce back" logic.
   return Response.redirect(mainSiteUrl, 302);
 };

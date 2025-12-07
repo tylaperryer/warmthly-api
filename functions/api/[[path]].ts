@@ -1,5 +1,3 @@
-// This is the secure, headless version of src/index.ts
-
 interface Env {
   YOCO_SECRET_KEY: string;
 }
@@ -7,35 +5,34 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
-  // Define the only domain that is allowed to talk to this API
-  const allowedOrigin = 'https://www.warmthly.org';
+  // Allow requests from all Warmthly sites
+  const allowedOrigins = [
+    'https://www.warmthly.org',
+    'https://mint.warmthly.org',
+    'https://post.warmthly.org',
+    'https://admin.warmthly.org',
+  ];
+  
+  const origin = request.headers.get('Origin') || '';
+  const isAllowedOrigin = allowedOrigins.some(allowed => origin.includes(allowed));
 
   const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : allowedOrigins[0],
   };
 
-  // --- RULE 1: Handle the browser's pre-flight security check ---
-  if (request.method === 'OPTIONS' ) {
+  if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // --- RULE 2: Only allow POST requests from here on ---
   if (request.method !== 'POST') {
-    // This is what a visitor typing the URL in their browser will see.
-    // It's a generic "not found" error, revealing nothing.
     return new Response('Not Found', { status: 404 });
   }
 
-  // --- RULE 3: Check that the request is coming from your actual website ---
-  const origin = request.headers.get('Origin');
-  if (origin !== allowedOrigin) {
-    // This blocks other websites or tools from trying to use your API.
+  if (!isAllowedOrigin) {
     return new Response('Forbidden: Invalid origin', { status: 403 });
   }
-
-  // --- If all rules pass, proceed with the payment logic ---
   try {
     const body = await request.json<{ amount?: number; currency?: string }>();
     const { amount, currency } = body;
