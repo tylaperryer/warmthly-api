@@ -1,0 +1,42 @@
+{
+  "name": "warmthly-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "jest --testPathPattern=tests/integration",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:load": "jest --testPathPattern=tests/load",
+    "test:all": "jest"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "compression": "^1.7.4",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "greenlock-express": "^4.0.3",
+    "jsonwebtoken": "^9.0.2",
+    "oracledb": "^6.0.0",
+    "resend": "^3.0.0",
+    "redis": "^4.6.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "server.js",
+      "utils/**/*.js",
+      "config/**/*.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/tests/"
+    ]
+  }
+}
